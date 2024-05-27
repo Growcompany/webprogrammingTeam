@@ -24,8 +24,8 @@ function gameHard(){
     let bulletCooldown = 200; // 총알 나가는 시간 (ms)
     let lastMousePosition = { x: canvas.width / 2, y: canvas.height / 2 };
 
-    const brickRow = 3;
-    const brickColumn = 8; // 원래 8
+    const brickRow = 5;
+    const brickColumn = 5; // 원래 8
     const brickWidth = 100;
     const brickHeight = 70;
     const brickPadding = 10;
@@ -37,6 +37,8 @@ function gameHard(){
     let enemyrandomspeed = 0.1; // 적의 속도차이 랜덤수치 설정
     let enemybasespeed = 0.07; // 적의 기본 속도 설정
     var hp;
+    // boss
+    let bossCreated = false; // 전역 변수로 보스 생성 여부를 추적
     // enemy
     var enemy_created = 0; 
     var enemy_level = 0;  
@@ -85,7 +87,6 @@ function gameHard(){
         }
     }
 
-
     function mouseMoveHandler(e) {
         const rect = canvas.getBoundingClientRect();
         lastMousePosition = {
@@ -113,7 +114,6 @@ function gameHard(){
         }
     }
 
-
     function bricks_setting(hp) {
         for (let c = 0; c < brickColumn; c++) {
             bricks[c] = [];
@@ -138,11 +138,15 @@ function gameHard(){
             bullets.push(bullet);
             lastBulletTime = now;
         }
+    
     }
+    
+
+
     function drawBricks() {
         for (let c = 0; c < brickColumn; c++) {
             for (let r = 0; r < brickRow; r++) {
-    
+
                 if (parseFloat(bricks[c][r].y) > canvas.height){ // 적들이 화면 아래까지 내려갈때
                     bricks[c][r].status = -1; // status가 -1일땐 화면아웃 상태
                     const enemy = document.getElementsByClassName(`enemy${c*brickRow+r}`)[0];
@@ -152,65 +156,74 @@ function gameHard(){
                     }
                     continue;
                 }
-    
+
                 if (bricks[c][r].status > 0) { // 적의 피가 남았을때
-                    if(!enemy_created){
+                    if(!enemy_created){ // 맨처음에 보스 생성
                         let brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
                         let brickY = (r * (brickHeight + brickPadding)) - brickOffsetTop;
                         bricks[c][r].x = brickX;
                         bricks[c][r].y = brickY;
+                        var maxHP = 30 * (enemy_level + 1); // 적의 최대 체력
+                        var hpBarWidth = brickWidth;
+                        var remainingHP = (bricks[c][r].status / maxHP) * 60 * hpBarWidth;
                         createEnemy(enemy_level, c*brickRow+r , brickX, brickY, brickWidth ,brickHeight);
                     }
-                    // 체력바 그리기
-                    var maxHP = 5 * (enemy_level + 1); // 적의 최대 체력
-                    var hpBarWidth = brickWidth;
-                    var hpBarHeight = brickHeight / 20;
-    
-                    const enemy = document.getElementsByClassName(`enemy${c*brickRow+r}`)[0];
-                    if (enemy) {
-                        const enemyLeft = parseFloat(enemy.style.left);
-                        const enemyTop = parseFloat(enemy.style.top);
+                    else {
+                        var maxHP = 5 * (enemy_level + 1); // 적의 최대 체력
+                        var hpBarWidth = brickWidth;
                         var remainingHP = (bricks[c][r].status / maxHP) * hpBarWidth;
-                        var hpBarY = enemyTop - hpBarHeight - 2; // 브릭 위에 체력바를 그리기 위해 Y 좌표 조정
-    
-                        // 그라데이션 생성
-                        var gradient = ctx.createLinearGradient(enemyLeft, hpBarY, enemyLeft + hpBarWidth, hpBarY);
-                        gradient.addColorStop(0, "#FF0000"); // 빨간색
-                        gradient.addColorStop(1, "#800000"); // 어두운 빨간색
-    
-                        // 흰색 배경으로 체력바 그리기 (테두리 포함)
-                        ctx.fillStyle = "#FFFFFF";
-                        ctx.fillRect(enemyLeft, hpBarY, hpBarWidth, hpBarHeight);
-    
-                        // 테두리 그리기
-                        ctx.strokeStyle = "#000000"; // 검은색 테두리
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(enemyLeft, hpBarY, hpBarWidth, hpBarHeight);
-    
-                        // 체력바 그리기 (그라데이션 적용)
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(enemyLeft, hpBarY, remainingHP, hpBarHeight);
                     }
+                    // 체력바 그리기
+                    //var hpBarWidth = brickWidth;
+                    var hpBarHeight = brickHeight / 20;
+
+                    enemy = document.getElementsByClassName(`enemy${c*brickRow+r}`)[0];
+                    enemyLeft = parseFloat(enemy.style.left);
+                    enemyTop = parseFloat(enemy.style.top);
+
+                    //var remainingHP = (bricks[c][r].status / maxHP) * hpBarWidth;
+                    var hpBarY = parseFloat(bricks[c][r].y) - hpBarHeight - 2; // 브릭 위에 체력바를 그리기 위해 Y 좌표 조정
+
+                    // 그라데이션 생성
+                    var gradient = ctx.createLinearGradient(bricks[c][r].x, hpBarY, bricks[c][r].x + hpBarWidth, hpBarY);
+                    gradient.addColorStop(0, "#FF0000"); // 빨간색
+                    gradient.addColorStop(1, "#800000"); // 어두운 빨간색
+
+                    // 흰색 배경으로 체력바 그리기 (테두리 포함)
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillRect( enemyLeft, hpBarY, hpBarWidth, hpBarHeight);
+
+                    // 테두리 그리기
+                    ctx.strokeStyle = "#000000"; // 검은색 테두리
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect( enemyLeft, hpBarY, hpBarWidth, hpBarHeight);
+
+                    // 체력바 그리기 (그라데이션 적용)
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect( enemyLeft, hpBarY, remainingHP, hpBarHeight);
+
                 }
                 else if (bricks[c][r].status == 0){ //죽었을때
                     const enemy = document.getElementsByClassName(`enemy${c*brickRow+r}`)[0];
                     if (enemy) {
                         const rand = Math.random();
                         switch (true) {
-                            case (rand < 0.2): //20퍼센트확률로 F아이템생성 
+                            case (rand < 0.1): //10퍼센트확률로 F아이템생성 
                                 createShowFItem(enemy.style.left, enemy.style.top);
                                 break;
-                            case (rand < 0.5): //30퍼센트확률로 치킨아이템생성
+                            case (rand < 0.3): //30퍼센트확률로 치킨아이템생성
                                 createChickenItem(enemy.style.left, enemy.style.top);
                                 break;
                         }
                         enemy.parentNode.removeChild(enemy);
                     }
+
                 }
+                
             }
         }
         enemy_created = 1;
-    
+
         if(enemyContainer.childElementCount == 0){ // 만약 적들이 다 죽으면(없으면) 다음 레벨로 이동
             if(enemy_level == enemy_maxlevel){ //모든 레벨의 적들을 죽이면 클리어 페이지 이동
                 gameClear = true;
@@ -227,10 +240,29 @@ function gameHard(){
                 bricks_setting(5 * (enemy_level + 1));
             }
         }
+
     }
+
+
     
+
+    let bossDirection = 1; // 초기 방향 (1: 오른쪽, -1: 왼쪽)
+
+
+    function moveBoss(enemy) {
+        setInterval(() => {
+            const currentLeft = parseFloat(enemy.style.left);
+            const newLeft = currentLeft + bossDirection * 500; // 50px 이동
+            if (newLeft <= 0 || newLeft + parseFloat(enemy.style.width) >= canvas.width) {
+                bossDirection *= -1; // 벽에 닿으면 방향 반전
+            }
+            enemy.style.left = `${newLeft}px`;
+        }, 1000); // 2초마다 이동
+    }
+
     function createEnemy(level, brick_num, brickX, brickY, brickWidth, brickHeight) {
         const enemy = document.createElement('img');
+    
         if (level < 2) {
             enemy.src = `enemy/enemy${level}.gif`;
             enemy.className = 'enemy' + brick_num;
@@ -240,33 +272,54 @@ function gameHard(){
             enemy.style.width = `${brickWidth}px`;
             enemy.style.height = `${brickHeight}px`;
             enemyContainer.appendChild(enemy);
+            //enemy.dataset.isBoss = False; // 보스임을 표시
             enemy.dataset.num = brick_num; // 몇 번째 적인지 저장하는 용도
             const enemyspeed = Math.random() * enemyrandomspeed + enemybasespeed; // 적의 속도 랜덤 설정
             enemy.dataset.speed = enemyspeed; // 속도 데이터를 저장
         } else {
-            const random = Math.floor(Math.random() * 2);
-            enemy.src = `enemy/enemy${level + random}.gif`;
-            if (random === 1) {
-                // enemy3의 경우: 왼쪽 아래에서 오른쪽으로 이동
-                enemy.style.left = `0px`;
-                enemy.style.top = `${canvas.height - brickY}px`;
+            if (!bossCreated) {
+                enemy.src = `enemy/boss2.gif`;
+                enemy.className = 'enemy' + brick_num;
+                enemy.style.position = 'absolute';
+                enemy.style.left = `${(canvas.width - brickWidth * 2) / 2}px`; // 중앙에 배치
+                enemy.style.top = '100px'; // 캔버스 상단에 배치
+                enemy.style.width = `${brickWidth * 2}px`; // 보스 크기를 더 크게 설정
+                enemy.style.height = `${brickHeight * 2}px`;
+                enemyContainer.appendChild(enemy);
+                //enemy.dataset.isBoss = true; // 보스임을 표시
+                bossCreated = true; // 보스 생성 여부를 true로 설정
+                enemy.dataset.num = brick_num; // 몇 번째 적인지 저장하는 용도
+                const enemyspeed = Math.random() * enemyrandomspeed + enemybasespeed; // 적의 속도 랜덤 설정
+                enemy.dataset.speed = enemyspeed; // 속도 데이터를 저장
+    
+                // 보스 좌우 이동 설정
+                moveBoss(enemy);
             } else {
-                // enemy2의 경우: 위에서 아래로 이동
-                enemy.style.left = `${brickX}px`;
-                enemy.style.top = `${brickY}px`;
+                const random = Math.floor(Math.random() * 2);
+                enemy.src = `enemy/enemy${level + random}.gif`;
+                if (random === 1) {
+                    // enemy3의 경우: 왼쪽 아래에서 오른쪽으로 이동
+                    enemy.style.left = `${Math.max(0, Math.min((canvas.width - brickWidth) / 2, brickX))}px`;
+                    enemy.style.top = `680px`;
+                    enemy.dataset.direction = 'right'; // 초기 방향 설정 **
+                } else {
+                    // enemy2의 경우: 위에서 아래로 이동
+                    enemy.style.left = `${brickX}px`;
+                    enemy.style.top = `${brickY}px`;
+                }
+                enemy.className = 'enemy' + brick_num;
+                enemy.style.position = 'absolute';
+                enemy.style.width = `${brickWidth}px`;
+                enemy.style.height = `${brickHeight}px`;
+                enemyContainer.appendChild(enemy);
+                //enemy.dataset.isBoss = False; // 보스임을 표시
+                enemy.dataset.num = brick_num; // 몇 번째 적인지 저장하는 용도
+                const enemyspeed = Math.random() * enemyrandomspeed + enemybasespeed; // 적의 속도 랜덤 설정
+                enemy.dataset.speed = enemyspeed; // 속도 데이터를 저장
             }
-            enemy.className = 'enemy' + brick_num;
-            enemy.style.position = 'absolute';
-            enemy.style.width = `${brickWidth}px`;
-            enemy.style.height = `${brickHeight}px`;
-            enemyContainer.appendChild(enemy);
-            enemy.dataset.num = brick_num; // 몇 번째 적인지 저장하는 용도
-            const enemyspeed = Math.random() * enemyrandomspeed + enemybasespeed; // 적의 속도 랜덤 설정
-            enemy.dataset.speed = enemyspeed; // 속도 데이터를 저장
         }
     }
-    
-    function updateEnemies() { // 적들 위치를 랜덤으로 바꿔주는 함수
+    function updateEnemies() {
         const enemies = document.querySelectorAll('#enemyContainer img');
         enemies.forEach(enemy => {
             const enemyNumber = parseFloat(enemy.dataset.num);
@@ -276,15 +329,39 @@ function gameHard(){
                 const speed = parseFloat(enemy.dataset.speed);
                 const currentLeft = parseFloat(enemy.style.left); // 현재 left 위치
                 const currentTop = parseFloat(enemy.style.top); // 현재 top 위치
-                if (enemy.src.includes('enemy3.gif')) { // enemy3.gif의 경우
-                    enemy.style.left = `${currentLeft + 4 * speed}px`; // 오른쪽으로 이동
-                } else {
-                    enemy.style.top = `${currentTop + 3 * speed}px`; // 나머지는 위에서 아래로 이동
+                
+                // 보스가 아닌 적들만 이동
+                if (!enemy.src.includes('boss2.gif')) {
+                    if (enemy.src.includes('enemy3.gif')) { // enemy3.gif의 경우
+                        //enemy.style.left = `${currentLeft + 4 * speed}px`; // 오른쪽으로 이동 기존 
+
+                        let direction = enemy.dataset.direction;
+
+                        if (direction === 'right') {
+                            enemy.style.left = `${enemyLeft + 4 * speed}px`;
+                            if (enemyLeft + 4 * speed >= canvas.width - brickWidth) {
+                                enemy.dataset.direction = 'left';
+                            }
+                        } else if (direction === 'left') {
+                            enemy.style.left = `${enemyLeft - 4 * speed}px`;
+                            if (enemyLeft - 4 * speed <= 0) {
+                                enemy.dataset.direction = 'right';
+                            }
+                        }
+                    } else {
+                        enemy.style.top = `${currentTop + 3 * speed}px`; // 나머지는 위에서 아래로 이동
+                    }
+                    bricks[c][r].x = currentLeft + speed;
+                    bricks[c][r].y = currentTop + speed; // 벽돌의 y 위치 업데이트
                 }
-                bricks[c][r].y = currentTop + speed; // 벽돌의 y 위치 업데이트
+                else {
+                    bricks[c][r].x = currentLeft + speed;
+                    bricks[c][r].y = currentTop + speed; // 벽돌의 y 위치 업데이트
+                }
             }
         });
     }
+    
     
 
     function createShowFItem(x,y){
@@ -347,13 +424,13 @@ function gameHard(){
         items.forEach(item => {
             const currentTop = parseFloat(item.style.top);
             if (currentTop + parseFloat(item.style.height)< canvas.height) {
-                const newTop = currentTop + 0.5; // 아이템 떨어지는 속도 조절
+                const newTop = currentTop + 2; // 아이템 떨어지는 속도 조절 (기존에는 0.5)
                 item.style.top = `${newTop}px`;
             }
         });
     }
 
-    function checkCollisionWithItems() {
+    function checkCollisionWithItems() { // 아이템 함수들의 main 역할 
         const playerRect = {
             left: playerX,
             top: canvas.height - playerHeight,
@@ -377,8 +454,6 @@ function gameHard(){
                 playerRect.top < itemRect.bottom &&
                 playerRect.bottom > itemRect.top
             ) {
-                // 충돌 시 아이템 제거 및 스코어 증가
-                item.remove();
                 // 아이템 클래스 중 Fitem이 있는지 확인
                 if (item.classList.contains('Fitem')) {
                     // Fitem이 포함된 경우 새로운 함수 호출
@@ -389,6 +464,8 @@ function gameHard(){
                     score += 10; // 예시로 10점을 추가
                     document.getElementById("score").textContent = score;
                 }
+                 // 충돌 시 아이템 제거 및 스코어 증가
+                 item.remove();
             }
         });
     }
@@ -650,8 +727,6 @@ function gameHard(){
     }
 
 
-
-
     // 캐릭터 이미지 생성
     const characterImages = [];
     for (let i = 0; i < 9; i++) {
@@ -727,6 +802,7 @@ function gameHard(){
     }
 
     //게임 종료 화면
+    /*
     function showGameOver() {
         var gameover = document.getElementById("gameOverScreen");
         var h1 = gameover.getElementsByTagName('h1')[0];
@@ -746,7 +822,19 @@ function gameHard(){
         }
         setTimeout(typing, 1500);
         setTimeout(showGameOverBtn, 4000);      
+    }*/
+    function gameOver() {
+        gameFinish = true;
+        enemyContainer.innerHTML = '';
+        var gameover = document.getElementById("gameOverScreen");
+        var h1 = gameover.getElementsByTagName('h1')[0];
+        h1.innerHTML = '';
+        var gameboard = document.getElementById("gameScreen");
+        gameboard.style.display = "none";
+        hideShowScreen(null,"gameOverScreen");
+        showGameOver();
     }
+
 
     function showGameOverBtn() {
         var sco = document.getElementById("gameOverScore");
